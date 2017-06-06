@@ -13,7 +13,10 @@
 
     app.events.on('app:logout:success', function() {
         if(app.idleLogin.isIdleLogoutEnabled()) {
-            app.idleLogin.logout();
+            // set as logged out, as manual logged out and clear timers if any
+            app.cache.set('isLoggedOut', true);
+            app.cache.set('isManualLogout', true);
+            app.idleLogin.clearExistingTimer();
         }
     });
 
@@ -25,16 +28,19 @@
 
     app.idleLogin = {};
     app.idleLogin.checkIdleTime = 60;
-    app.idleLogin.idleTimeoutTime = 60;
+    app.idleLogin.idleTimeoutTime = 120;
 
     app.idleLogin.idleTimer = null; 
  
     app.idleLogin.login = function() {
         app.cache.set('isLoggedOut', false);
+        app.cache.set('isManualLogout', false);
     };
 
-    app.idleLogin.logout = function() {
+    app.idleLogin.autoLogout = function() {
+        // clear existing timer
         app.idleLogin.clearExistingTimer();
+        // show logout message
         app.alert.show('idle-logout', {
             level: 'error',
             autoClose: false,
@@ -42,12 +48,13 @@
             title: app.lang.get('LBL_IDLE_LOGOUT_TITLE')
         });
 
-        // call it only once from the first triggering tab/window
+        // execute proper logout. call it only once from the first triggering tab/window
         if(!app.cache.get('isLoggedOut')) {
             app.cache.set('isLoggedOut', true);
             app.api.logout();
         }
 
+        // show login screen
         app.router.login();
     };
 
@@ -63,8 +70,11 @@
             app.idleLogin.idleTimeoutTime = app.config.idle_logout_time;
         }
 
+        // bind updates
         app.idleLogin.bindUpdateTimeOnActivity();
+        // clear existing timers if any
         app.idleLogin.clearExistingTimer();
+        // start the idle timer
         app.idleLogin.idleTimer = setInterval(function() { app.idleLogin.checkForIdle(); }, app.idleLogin.checkIdleTime * 1000);
     };
 
@@ -75,11 +85,18 @@
     app.idleLogin.checkForIdle = function() {
         if(!app.cache.get('isLoggedOut')) {
             if(app.cache.get('inactivityLogoutTime') <= $.now()) {
-                app.idleLogin.logout();
+                // main tab, execute logout and show idle error message
+                app.idleLogin.autoLogout();
             }
         } else {
-            // call logout to clear the timer
-            app.idleLogin.logout();
+            if(app.cache.get('isManualLogout')) {
+                // clear timer and show login screen (no idle error message)
+                app.idleLogin.clearExistingTimer();
+                app.router.login();
+            } else {
+                // secondary tabs, execute logout and show idle error message
+                app.idleLogin.autoLogout();
+            }
         }
     };
 

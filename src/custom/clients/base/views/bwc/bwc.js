@@ -18,9 +18,11 @@
                 return;
             }
 
-            if(app.idleLogin.isIdleLogoutEnabled() && !app.cache.get('isLoggedOut')) {
+            if(app.idleLogin.isIdleLogoutEnabled()) {
                 this.contentWindow.$('body').on('click scroll mousemove mousedown keyup keypress', function() {
-                    app.idleLogin.updateActivity();
+                    if(!app.cache.get('isLoggedOut')) {
+                        app.idleLogin.updateActivity();
+                    }
                 });
             }
         });

@@ -113,9 +113,11 @@
         // init activity time
         app.idleLogin.updateActivity();
 
-        if(app.idleLogin.isIdleLogoutEnabled() && !app.cache.get('isLoggedOut')) {
+        if(app.idleLogin.isIdleLogoutEnabled()) {
             $('body').on('click scroll mousemove mousedown keyup keypress', function() {
-                app.idleLogin.updateActivity();            
+                if(!app.cache.get('isLoggedOut')) {
+                    app.idleLogin.updateActivity();
+                }
             });
         }
     };
